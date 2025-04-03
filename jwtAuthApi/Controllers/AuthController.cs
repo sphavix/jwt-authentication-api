@@ -10,10 +10,12 @@ namespace jwtAuthApi.Controllers
     public class AuthController : ControllerBase
     {
         private readonly DataAccess _dataAccess;
+        private readonly TokenProvider _tokenProvider;
 
-        public AuthController(DataAccess dataAccess)
+        public AuthController(DataAccess dataAccess, TokenProvider tokenProvider)
         {
             _dataAccess = dataAccess;
+            _tokenProvider = tokenProvider;
         }
 
         [HttpPost("register")]
@@ -29,6 +31,35 @@ namespace jwtAuthApi.Controllers
             }
 
             return BadRequest();
+        }
+
+        [HttpPost("login")]
+        public ActionResult<AuthResponse> Login(AuthRequest request)
+        {
+            AuthResponse response = new();
+
+            var user = _dataAccess.FindByEmail(request.Email);
+
+            if(user == null)
+            {
+                return BadRequest("User does not exist!");
+            }
+
+            var verifyPassword = BCrypt.Net.BCrypt.Verify(request.Password, user.Password);
+
+            if(!verifyPassword)
+            {
+                return BadRequest("Incorrect Password, please try again!");
+            }
+
+            // generate access token
+            var token = _tokenProvider.GenerateToken(user);
+
+            response.AccessToken = token.AccessToken;
+
+            // generate referesh token
+
+            return response;
         }
     }
 }

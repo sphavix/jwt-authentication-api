@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using jwtAuthApi.Models;
 using Microsoft.Data.SqlClient;
 
 namespace jwtAuthApi.Infrastructure
@@ -40,6 +41,12 @@ namespace jwtAuthApi.Infrastructure
             return result > 0;
         }
 
+        public User? FindByEmail(string email)
+        {
+            var query = "SELECT * FROM [AppUser] WHERE [Email] = @email";
+
+            return sqlConnection.QueryFirstOrDefault<User>(query, new { email = email });
+        }
 
     }
 }
