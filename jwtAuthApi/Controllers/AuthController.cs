@@ -1,4 +1,5 @@
-﻿using jwtAuthApi.Infrastructure;
+﻿using Azure.Core;
+using jwtAuthApi.Infrastructure;
 using jwtAuthApi.Models.Dtos;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -58,8 +59,67 @@ namespace jwtAuthApi.Controllers
             response.AccessToken = token.AccessToken;
 
             // generate referesh token
+            response.RefreshToken = token.RefershToken.Token;
 
-            return response;
+            _dataAccess.DisableUserTokenByEmail(request.Email);
+
+            _dataAccess.AddRefreshToken(token.RefershToken, request.Email);
+
+            return Ok(response);
         }
+
+        [HttpPost("refresh-token")]
+        public ActionResult<AuthResponse> RefreshToken()
+        {
+            AuthResponse response = new();
+
+            var refreshToken = Request.Cookies["refreshtoken"];
+
+            if(string.IsNullOrEmpty(refreshToken))
+            {
+                return BadRequest();
+            }
+
+            var isTokenValid = _dataAccess.IsRefreshTokenValid(refreshToken);
+
+            if(!isTokenValid)
+            {
+                return BadRequest();
+            }
+
+            var currentUser = _dataAccess.FindUserByToken(refreshToken);
+
+            if(currentUser == null)
+            {
+                return BadRequest();
+            }
+
+            // Generate access token
+            var token = _tokenProvider.GenerateToken(currentUser);
+
+            response.AccessToken = token.AccessToken;
+
+            response.RefreshToken = token.RefershToken.Token;
+
+            _dataAccess.DisableUserToken(refreshToken);
+
+            _dataAccess.AddRefreshToken(token.RefershToken, currentUser.Email);
+
+            return Ok(response);
+        }
+
+        [HttpPost("logout")]
+        public ActionResult Logout()
+        {
+            var resfreshToken = Request.Cookies["refreshtoken"];
+
+            if(resfreshToken != null)
+            {
+                _dataAccess.DisableUserToken(resfreshToken);
+            }
+
+            return NoContent();
+        }
+
     }
 }

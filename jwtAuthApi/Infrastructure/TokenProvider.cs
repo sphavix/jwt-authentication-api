@@ -10,11 +10,16 @@ namespace jwtAuthApi.Infrastructure
     {
         private readonly IConfiguration _configuration = configuration;
 
-        public Token GenerateToken(User user)
+        public UserToken GenerateToken(User user)
         {
             var accessToken = GenereteAccessToken(user);
+            var refreshToken = GenerateRefreshToken();
 
-            return new Token { AccessToken = accessToken };
+            return new UserToken 
+            { 
+                AccessToken = accessToken,
+                RefershToken = refreshToken
+            };
         }
 
         private string GenereteAccessToken(User user)
@@ -36,6 +41,19 @@ namespace jwtAuthApi.Infrastructure
             };
 
             return new JsonWebTokenHandler().CreateToken(tokenDescriptor);
+        }
+
+        private RefreshToken GenerateRefreshToken()
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = Guid.NewGuid().ToString(),
+                ExpiresAt = DateTime.Now.AddMonths(1),
+                CreatedAt = DateTime.Now,
+                Enabled = true
+            };
+
+            return refreshToken;
         }
     }
 }
